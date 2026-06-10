@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tasks</title>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{font-family:-apple-system,monospace;background:#000;color:#fff;line-height:1.5}
+        .c{max-width:1200px;margin:0 auto;padding:60px 40px}
+        .h{border-bottom:1px solid #1a1a1a;padding-bottom:30px;margin-bottom:50px}
+        .h h1{font-size:28px;font-weight:400;letter-spacing:4px}
+        .h p{font-size:13px;color:#666}
+        .s{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:#1a1a1a;margin-bottom:50px}
+        .s div{background:#0a0a0a;padding:24px;text-align:center}
+        .s div div{font-size:36px;font-weight:300;padding:0}
+        .s div span{font-size:10px;letter-spacing:2px;color:#666}
+        .g{display:grid;grid-template-columns:340px 1fr;gap:50px}
+        .fld{margin-bottom:24px}
+        .fld label{display:block;font-size:11px;letter-spacing:1px;color:#666;margin-bottom:8px}
+        input,select{width:100%;padding:10px 0;background:0 0;border:none;border-bottom:1px solid #222;color:#fff;font-size:14px}
+        input:focus,select:focus{outline:none;border-bottom-color:#fff}
+        input[type="datetime-local"]{color-scheme:dark}
+        .btn{width:100%;padding:12px;background:#fff;border:none;color:#000;font-size:11px;letter-spacing:2px;cursor:pointer;margin-top:10px}
+        .btn:hover{opacity:.8}
+        .th{display:flex;justify-content:space-between;margin-bottom:25px;padding-bottom:15px;border-bottom:1px solid #1a1a1a}
+        .filt{padding:6px 16px;background:#0a0a0a;border:1px solid #1a1a1a;color:#666;font-size:11px;cursor:pointer}
+        .filt.a{background:#fff;color:#000}
+        .task{padding:20px 0;border-bottom:1px solid #1a1a1a;display:flex;gap:15px;align-items:center}
+        .task.c{opacity:.4}
+        .task input{width:18px;height:18px;accent-color:#fff;margin:0}
+        .task .t{flex:1}
+        .task .tt{font-size:15px;margin-bottom:6px}
+        .task.c .tt{text-decoration:line-through}
+        .task .m{display:flex;gap:15px;font-size:11px;color:#666}
+        .high,.medium,.low{display:inline}
+        .high .tt{color:#fff}
+        .medium .tt{color:#aaa}
+        .low .tt{color:#666}
+        .del{background:0 0;border:1px solid #222;padding:5px 12px;color:#666;font-size:10px;cursor:pointer}
+        .del:hover{border-color:#fff;color:#fff}
+        .e{text-align:center;padding:50px;color:#333}
+        @media(max-width:800px){.c{padding:30px 20px}.g{grid-template-columns:1fr;gap:30px}}
+    </style>
+</head>
+<body>
+<div class=c>
+    <div class=h><h1>TASKS</h1><p>менеджер задач</p></div>
+    <div class=s><div><div id=total>0</div><span>всего</span></div><div><div id=active>0</div><span>активных</span></div><div><div id=done>0</div><span>выполнено</span></div></div>
+    <div class=g>
+        <div>
+            <div class=fld><label>название</label><input type=text id=t placeholder="что нужно сделать?"></div>
+            <div class=fld><label>приоритет</label><select id=p><option value=low>низкий</option><option value=medium selected>средний</option><option value=high>высокий</option></select></div>
+            <div class=fld><label>срок</label><input type=datetime-local id=d></div>
+            <button class=btn onclick=a()>+ добавить</button>
+        </div>
+        <div>
+            <div class=th><span>список задач</span><div><button class="filt a" onclick=f('all')>все</button><button class=filt onclick=f('active')>активные</button><button class=filt onclick=f('done')>выполнено</button></div></div>
+            <div id=l></div>
+        </div>
+    </div>
+</div>
+<script>
+const API='/api/tasks';let fl='all',ts=[];
+function fd(d){if(!d)return'без срока';let date=new Date(d);if(isNaN(date))return'без срока';let diff=Math.floor((date-new Date())/86400000);if(diff<0)return'просрочено';if(diff==0)return'сегодня';if(diff==1)return'завтра';return`через ${diff} дн.`}
+async function l(){let r=await fetch(API);ts=await r.json();
+document.getElementById('total').innerText=ts.length;let c=ts.filter(t=>t.done).length;
+document.getElementById('done').innerText=c;document.getElementById('active').innerText=ts.length-c;
+let fts=ts;if(fl=='active')fts=ts.filter(t=>!t.done);if(fl=='done')fts=ts.filter(t=>t.done);
+if(!fts.length){document.getElementById('l').innerHTML='<div class=e>— нет задач —</div>';return}
+document.getElementById('l').innerHTML=fts.map(t=>`<div class="task ${t.done?'c':''}"><input type=checkbox ${t.done?'checked':''} onchange="t(${t.id},this.checked)"><div class=t><div class=tt>${e(t.title)}</div><div class=m><span>${t.priority=='high'?'высокий':t.priority=='medium'?'средний':'низкий'}</span><span>${fd(t.datetime)}</span></div></div><button class=del onclick="d(${t.id})">удалить</button></div>`).join('')}
+function e(s){return s?s.replace(/[&<>]/g,function(m){return m=='&'?'&amp;':m=='<'?'&lt;':m=='>'?'&gt;':m}):''}
+async function a(){let title=document.getElementById('t').value.trim();if(!title)return;await fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title,priority:document.getElementById('p').value,datetime:document.getElementById('d').value,description:'',done:false})});document.getElementById('t').value='';document.getElementById('d').value='';l()}
+async function t(id,done){await fetch(`${API}/${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({done})});l()}
+async function d(id){if(confirm('Удалить?')){await fetch(`${API}/${id}`,{method:'DELETE'});l()}}
+function f(fil){fl=fil;document.querySelectorAll('.filt').forEach((b,i)=>{b.classList.toggle('a',b.innerText==(fil=='all'?'все':fil=='active'?'активные':'выполнено'))});l()}
+l()
+</script>
+</body>
+</html>
